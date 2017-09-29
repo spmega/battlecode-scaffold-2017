@@ -1,0 +1,3 @@
+Goals I want to accomplish
+	1) Gardening, and setting economy
+	2) Creating Dodging and attcking code
