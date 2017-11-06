@@ -6,7 +6,7 @@ import battlecode.common.RobotController;
 public class BroadCaster {
 	
 	public static final int GARDENER_POSITION_CHANNEL_MIN = 0;
-	public static final int GARDENER_POSITION_CHANNEL_MAX = 40;
+	public static final int GARDENER_POSITION_CHANNEL_MAX = 20;
 	
 	public static void broadcast(RobotController rc, int channel, int data) throws GameActionException{
 		rc.broadcast(channel, data);

@@ -7,6 +7,7 @@ import battlecode.common.RobotController;
 
 public class ArchonBot {
 	private RobotController rc;
+	private int numOfHiredGardeners = 0;
 	
 	public ArchonBot(RobotController rc) {
 		super();
@@ -37,9 +38,13 @@ public class ArchonBot {
 	
 	private void hireGardener() throws GameActionException{
 		Direction rndDir = RobotCommon.randomDirection();
-		if(rc.canHireGardener(rndDir) && rc.readBroadcastFloat(BroadCaster.GARDENER_POSITION_CHANNEL_MAX - 1) == 0
+		if(rc.canHireGardener(rndDir) 
+				&& rc.isBuildReady() 
+				&& rc.readBroadcastFloat(BroadCaster.GARDENER_POSITION_CHANNEL_MAX - 1) == 0
 				&& rc.readBroadcastFloat(BroadCaster.GARDENER_POSITION_CHANNEL_MAX) == 0) {
 			rc.hireGardener(rndDir);
+			numOfHiredGardeners++;
+			RobotCommon.debug("hired gardeners: " + numOfHiredGardeners);
 		}
 	}
 	

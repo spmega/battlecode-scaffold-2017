@@ -28,7 +28,7 @@ public class RobotCommon {
      * @return true if a move was performed
      * @throws GameActionException
      */
-    static boolean tryMove(RobotController rc, Direction dir) throws GameActionException {
+    static boolean tryMove(RobotController rc, Direction dir){
         return tryMove(rc, dir,20,3);
     }
 
@@ -41,35 +41,39 @@ public class RobotCommon {
      * @return true if a move was performed
      * @throws GameActionException
      */
-    static boolean tryMove(RobotController rc, Direction dir, float degreeOffset, int checksPerSide) throws GameActionException {
-
-        // First, try intended direction
-        if (rc.canMove(dir)) {
-            rc.move(dir);
-            return true;
-        }
-
-        // Now try a bunch of similar angles
-        boolean moved = false;
-        int currentCheck = 1;
-
-        while(currentCheck<=checksPerSide) {
-            // Try the offset of the left side
-            if(rc.canMove(dir.rotateLeftDegrees(degreeOffset*currentCheck))) {
-                rc.move(dir.rotateLeftDegrees(degreeOffset*currentCheck));
+    static boolean tryMove(RobotController rc, Direction dir, float degreeOffset, int checksPerSide){
+    	try{
+    		// First, try intended direction
+            if (rc.canMove(dir)) {
+                rc.move(dir);
                 return true;
             }
-            // Try the offset on the right side
-            if(rc.canMove(dir.rotateRightDegrees(degreeOffset*currentCheck))) {
-                rc.move(dir.rotateRightDegrees(degreeOffset*currentCheck));
-                return true;
-            }
-            // No move performed, try slightly further
-            currentCheck++;
-        }
 
-        // A move never happened, so return false.
-        return false;
+            // Now try a bunch of similar angles
+            boolean moved = false;
+            int currentCheck = 1;
+
+            while(currentCheck<=checksPerSide) {
+                // Try the offset of the left side
+                if(rc.canMove(dir.rotateLeftDegrees(degreeOffset*currentCheck))) {
+                    rc.move(dir.rotateLeftDegrees(degreeOffset*currentCheck));
+                    return true;
+                }
+                // Try the offset on the right side
+                if(rc.canMove(dir.rotateRightDegrees(degreeOffset*currentCheck))) {
+                    rc.move(dir.rotateRightDegrees(degreeOffset*currentCheck));
+                    return true;
+                }
+                // No move performed, try slightly further
+                currentCheck++;
+            }
+
+            // A move never happened, so return false.
+            return false;
+    	} catch(Exception e){
+    		e.printStackTrace();
+    	}
+		return false;
     }
 
     /**
@@ -103,5 +107,9 @@ public class RobotCommon {
         float perpendicularDist = (float)Math.abs(distToRobot * Math.sin(theta)); // soh cah toa :)
 
         return (perpendicularDist <= rc.getType().bodyRadius);
+    }
+    
+    static void randomMove(RobotController rc){
+    	RobotCommon.tryMove(rc, RobotCommon.randomDirection());
     }
 }

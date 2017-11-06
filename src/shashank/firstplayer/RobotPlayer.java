@@ -39,6 +39,9 @@ public strictfp class RobotPlayer {
             case LUMBERJACK:
             	new LumberjackBot(rc).run();
                 break;
+            case SCOUT:
+            	new ScoutBot(rc).run();
+                break;
         }
 	}
 

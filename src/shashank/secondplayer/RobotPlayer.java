@@ -1,15 +1,8 @@
-package waterloo.lumberjackplayer;
+package shashank.secondplayer;
 import battlecode.common.*;
 
 public strictfp class RobotPlayer {
-	public static final int CHANNEL_NUMBER_OF_ARCHONS = 0;
-	public static final int CHANNEL_NUMBER_OF_GARDENERS = 1;
-	public static final int CHANNEL_NUMBER_OF_SOLDIERS = 2;
-	public static final int CHANNEL_NUMBER_OF_LUMBERJACKS = 3;
-	
     static RobotController rc;
-    static int myID;
-    static boolean noGardenerYet = true;
 
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
@@ -17,52 +10,30 @@ public strictfp class RobotPlayer {
     **/
     @SuppressWarnings("unused")
     public static void run(RobotController rc) throws GameActionException {
-
         // This is the RobotController object. You use it to perform actions from this robot,
         // and to get information on its current status.
         RobotPlayer.rc = rc;
 
         // Here, we've separated the controls into a different method for each RobotType.
         // You can add the missing ones or rewrite this into your own control structure.
-        myID = rc.readBroadcast(myNumberOfChannel());
-        rc.broadcast(myNumberOfChannel(), myID + 1);
         switch (rc.getType()) {
             case ARCHON:
-                runArchon();
+                //runArchon();
+                new Archon(rc).loop();
                 break;
             case GARDENER:
-                runGardener();
+                //runGardener();
+                new Gardener(rc).loop();
                 break;
             case SOLDIER:
                 runSoldier();
                 break;
             case LUMBERJACK:
-                runLumberjack();
+                //runLumberjack();
+                new LumberJack(rc).loop();
                 break;
-            case SCOUT:
-            	runScout();
-            	break;
         }
 	}
-    
-    static void runScout() throws GameActionException {
-
-        System.out.println("I'm a scout!");
-
-        // The code you want your robot to perform every round should be in this loop
-        while (true) {
-
-            // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
-            try {
-            	
-                Clock.yield();
-
-            } catch (Exception e) {
-                System.out.println("Archon Exception");
-                e.printStackTrace();
-            }
-        }
-    }
 
     static void runArchon() throws GameActionException {
         System.out.println("I'm an archon!");
@@ -77,13 +48,17 @@ public strictfp class RobotPlayer {
                 Direction dir = randomDirection();
 
                 // Randomly attempt to build a gardener in this direction
-                if (rc.canHireGardener(dir) && myID == 0 && noGardenerYet) {
+                if (rc.canHireGardener(dir) && Math.random() < .01) {
                     rc.hireGardener(dir);
-                    noGardenerYet = false;
                 }
 
                 // Move randomly
-                // tryMove(randomDirection());
+                tryMove(randomDirection());
+
+                // Broadcast archon's location for other robots on the team to know
+                MapLocation myLocation = rc.getLocation();
+                rc.broadcast(0,(int)myLocation.x);
+                rc.broadcast(1,(int)myLocation.y);
 
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
@@ -104,10 +79,18 @@ public strictfp class RobotPlayer {
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
 
+                // Listen for home archon's location
+                int xPos = rc.readBroadcast(0);
+                int yPos = rc.readBroadcast(1);
+                MapLocation archonLoc = new MapLocation(xPos,yPos);
+
                 // Generate a random direction
                 Direction dir = randomDirection();
 
-                if (rc.canBuildRobot(RobotType.LUMBERJACK, dir) && rc.isBuildReady()) {
+                // Randomly attempt to build a soldier or lumberjack in this direction
+                if (rc.canBuildRobot(RobotType.SOLDIER, dir) && Math.random() < .01) {
+                    rc.buildRobot(RobotType.SOLDIER, dir);
+                } else if (rc.canBuildRobot(RobotType.LUMBERJACK, dir) && Math.random() < .01 && rc.isBuildReady()) {
                     rc.buildRobot(RobotType.LUMBERJACK, dir);
                 }
 
@@ -260,18 +243,6 @@ public strictfp class RobotPlayer {
 
         // A move never happened, so return false.
         return false;
-    }
-    
-    static int myNumberOfChannel()
-    {
-    	switch (rc.getType())
-    	{
-    	case ARCHON: return CHANNEL_NUMBER_OF_ARCHONS;
-    	case GARDENER: return CHANNEL_NUMBER_OF_GARDENERS;
-    	case SOLDIER: return CHANNEL_NUMBER_OF_SOLDIERS;
-    	case LUMBERJACK: return CHANNEL_NUMBER_OF_LUMBERJACKS;
-    	}
-    	throw new RuntimeException();
     }
 
     /**
