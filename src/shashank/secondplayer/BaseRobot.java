@@ -25,15 +25,16 @@ public abstract class BaseRobot {
     private void tryMove(Direction direction, MapLocation mapLocation, float distance){
 
         try {
-
-            if(mapLocation != null && rc.canMove(mapLocation)){
-                rc.move(mapLocation);
-            } else if(direction != null && distance != 0) {
-                rc.move(direction, distance);
-            } else if (direction != null){
-                rc.move(direction);
-            } else {
-                DebugLogger.printWarning(rc.getType().name() + " : " + rc.getID() + "did not move because there were no valid parameters given");
+            if(!rc.hasMoved()){
+                if(mapLocation != null && rc.canMove(mapLocation)){
+                    rc.move(mapLocation);
+                } else if(direction != null && distance != 0) {
+                    rc.move(direction, distance);
+                } else if (direction != null){
+                    rc.move(direction);
+                } else {
+                    DebugLogger.printWarning(rc.getType().name() + " : " + rc.getID() + "did not move because there were no valid parameters given");
+                }
             }
 
         } catch (GameActionException e) {
@@ -53,6 +54,49 @@ public abstract class BaseRobot {
     public void tryMove(Direction direction, float distance){
         tryMove(direction, null, distance);
     }
+
+    /*
+    private void forceMove(Direction direction, MapLocation mapLocation, float distance, double maxOffsetAmount, double offsetAmount, boolean counterClockWise){
+
+        try {
+
+            if(mapLocation != null && rc.canMove(mapLocation)){
+
+                Direction directionToMoveIn = rc.getLocation().directionTo(mapLocation);
+                float distanceToCover = rc.getLocation().distanceTo(mapLocation);
+
+                if(!rc.hasMoved()){
+                    while(!rc.canMove(directionToMoveIn, distanceToCover)){
+
+                    }
+                }
+
+            } else if(direction != null && distance != 0) {
+                rc.move(direction, distance);
+            } else if (direction != null){
+                rc.move(direction);
+            } else {
+                DebugLogger.printWarning(rc.getType().name() + " : " + rc.getID() + "did not move because there were no valid parameters given");
+            }
+
+        } catch (GameActionException e) {
+            DebugLogger.printError(e);
+        }
+
+    }
+
+    public void forceMove(MapLocation mapLocation){
+        tryMove(null, mapLocation, 0);
+    }
+
+    public void forceMove(Direction direction){
+        tryMove(direction, null, 0);
+    }
+
+    public void forceMove(Direction direction, float distance){
+        tryMove(direction, null, distance);
+    }
+    */
 
     //Shooting
     private void shoot(boolean triad, boolean pentad, Direction direction){

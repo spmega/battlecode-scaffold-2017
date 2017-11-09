@@ -23,7 +23,7 @@ import battlecode.common.*;
  */
 public class Archon extends BaseRobot{
     private RobotController rc;
-    private int maxGardeners = 5;
+    private int maxGardeners = 7;
 
     public Archon(RobotController rc) {
         super(rc);
@@ -32,48 +32,59 @@ public class Archon extends BaseRobot{
 
     @Override
     public void loop(){
+        /*
         while (true){
             tryMove(randomDirection());
             maintainGardeners();
 
             Clock.yield();
         }
-    }
+        */
 
-    private void buildGardener(Direction direction){
-        if((direction != null && rc.getBuildCooldownTurns() == 0) && rc.canBuildRobot(RobotType.GARDENER, direction)){
+        while (true) {
+
+            // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
-                rc.buildRobot(RobotType.GARDENER, direction);
-            } catch (GameActionException e) {
+                BulletInfo[] bulletInfos = rc.senseNearbyBullets();
+                for(int i = 0; i < bulletInfos.length; i++){
+                    if(bulletWillCollideWithMe(bulletInfos[i])){
+                        rc.broadcastFloat(300, rc.getLocation().x);
+                        rc.broadcastFloat(301, rc.getLocation().y);
+                        break;
+                    } else if(i == bulletInfos.length-1){
+                        rc.broadcastFloat(300, 0);
+                        rc.broadcastFloat(301, 0);
+                    }
+                }
+
+                int numOfGardeners = rc.readBroadcast(100);
+
+                // Generate a random direction
+                Direction dir = randomDirection();
+
+                // Randomly attempt to build a gardener in this direction
+                while(rc.getBuildCooldownTurns() == 0 && !rc.canHireGardener(dir)){
+                    dir = randomDirection();
+                }
+                if (rc.canHireGardener(dir) && numOfGardeners <= maxGardeners) {
+                    rc.hireGardener(dir);
+                }
+
+                // Move randomly
+                tryMove(randomDirection());
+
+                // Broadcast archon's location for other robots on the team to know
+                MapLocation myLocation = rc.getLocation();
+                rc.broadcast(0,(int)myLocation.x);
+                rc.broadcast(1,(int)myLocation.y);
+
+                // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
+                Clock.yield();
+
+            } catch (Exception e) {
+                System.out.println("Archon Exception");
                 e.printStackTrace();
             }
         }
-    }
-
-    public void maintainGardeners(){
-
-        int message = 0;
-
-        try {
-            message = rc.readBroadcast(10);
-        } catch (GameActionException e) {
-            e.printStackTrace();
-        }
-
-        if(message < maxGardeners){
-            //DebugLogger.printInfo("channel " + i + ": " + message);
-            if( rc.getBuildCooldownTurns() == 0){
-                buildGardener(findOpenDirectionToBuild());
-            }
-        }
-    }
-
-    private Direction findOpenDirectionToBuild() {
-        Direction direction = randomDirection();
-        while(!rc.canBuildRobot(RobotType.GARDENER, direction)){
-            direction = randomDirection();
-        }
-
-        return direction;
     }
 }

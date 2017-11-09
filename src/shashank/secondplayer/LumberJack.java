@@ -2,10 +2,10 @@ package shashank.secondplayer;
 
 import battlecode.common.*;
 
+import java.util.Arrays;
+
 public class LumberJack extends BaseRobot{
     private RobotController rc;
-    private MapLocation targetArchonLoc = null;
-    private MapLocation targetTreeLocation = null;
 
     public LumberJack(RobotController rc) {
         super(rc);
@@ -14,114 +14,137 @@ public class LumberJack extends BaseRobot{
 
     @Override
     void loop() {
-        while (true){
-            //tryMove(randomDirection());
-            chopTrees();
-            Clock.yield();
+        Team enemy = rc.getTeam().opponent();
+
+        try {
+            rc.broadcast(600, rc.readBroadcast(500) + 1);
+        } catch (GameActionException e) {
+            e.printStackTrace();
         }
-    }
 
-    private void chopTrees() {
-        //first check for defenceless archons
-        /*
-        RobotInfo[] robotInfos = rc.senseNearbyRobots(RobotType.LUMBERJACK.sensorRadius, rc.getTeam());
-        MapLocation archonLocation = null;
-        for(RobotInfo robotInfo: robotInfos){
-            if(robotInfo.type == RobotType.ARCHON){
-                archonLocation = robotInfo.location;
-            } else if(archonLocation != null){
+        // The code you want your robot to perform every round should be in this loop
+        while (true) {
 
-                for(RobotInfo info: robotInfos){
-                    if(robotInfos.length < 2){
-                        targetArchonLoc = archonLocation;
-                        try {
-                            rc.broadcastFloat(5, targetArchonLoc.x);
-                            rc.broadcastFloat(6, targetArchonLoc.y);
-                        } catch (GameActionException e) {
-                            e.printStackTrace();
-                        }
-                        return;
-                    }
-
-                    break;
+            // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
+            try {
+                //if less than 15% of health, consider spawning more one more soldier
+                if(rc.getHealth()/rc.getType().maxHealth < 0.15){
+                    rc.broadcast(600, rc.readBroadcast(500) - 1);
                 }
 
-                break;
-            }
-        }
-        */
+                //read the broadcast, in case you dont find any trees
+                /*
+                float x = rc.readBroadcastFloat(200);
+                float y = rc.readBroadcastFloat(201);
+                MapLocation possibleTreeLoc = new MapLocation(x, y);
 
-        /*
-        if(targetTreeLocation == null){
-            MapLocation targetTree = null;
-            TreeInfo[] treeInfos = rc.senseNearbyTrees();
-            RobotInfo[] friendliesInfos = rc.senseNearbyRobots(RobotType.LUMBERJACK.sensorRadius, rc.getTeam());
-            for(TreeInfo treeInfo: treeInfos){
-                boolean nextTree = false;
-
-                for(RobotInfo friendlyInfo: friendliesInfos){
-                    if(friendlyInfo.type == RobotType.LUMBERJACK
-                            && friendlyInfo.location.distanceTo(treeInfo.location) <= 2){
-
-                        nextTree = true;
-                        break;
+                //check if we are in the area
+                if(rc.canSenseLocation(possibleTreeLoc)){
+                    //then check if a tree really is there
+                    TreeInfo possibleTreeInfo = rc.senseTreeAtLocation(possibleTreeLoc);
+                    if(possibleTreeInfo == null){
+                        possibleTreeLoc = null;
+                    } else {
+                        possibleTreeLoc = possibleTreeInfo.location;
                     }
+                } else if(x == 0 && y == 0){
+                    possibleTreeLoc = null;
                 }
+                */
 
-                if(nextTree) continue;
+                // See if there are any enemy robots within striking range (distance 1 from lumberjack's radius)
+                RobotInfo[] robots = rc.senseNearbyRobots(RobotType.LUMBERJACK.bodyRadius+GameConstants.LUMBERJACK_STRIKE_RADIUS, enemy);
 
-                if(rc.canChop(treeInfo.location)){
-                    try {
-                        rc.chop(treeInfo.location );
-                    } catch (GameActionException e) {
-                        e.printStackTrace();
-                    }
+                if(robots.length > 0 && !rc.hasAttacked()) {
+                    // Use strike() to hit all nearby robots!
+                    rc.strike();
                 } else {
-                    tryMove(treeInfo.location);
+                    // No close robots, so search for robots within sight radius
+                    robots = rc.senseNearbyRobots(-1,enemy);
+
+                    // If there is a robot, move towards it
+                    if(robots.length > 0) {
+                        MapLocation myLocation = rc.getLocation();
+                        MapLocation enemyLocation = robots[0].getLocation();
+                        Direction toEnemy = myLocation.directionTo(enemyLocation);
+
+                        tryMove(toEnemy);
+
+                        rc.broadcastFloat(400, enemyLocation.x);
+                        rc.broadcastFloat(401, enemyLocation.y);
+                    } else {
+                        // Move Randomly
+                        //tryMove(randomDirection());
+
+                        //Since there are no robots, search for trees
+                        TreeInfo[] treeInfos = rc.senseNearbyTrees(-1);
+                        TreeInfo tree = null;
+
+                        for(TreeInfo treeInfo: treeInfos){
+                            //if the tree is not ours, chop it
+                            if(!treeInfo.team.equals( rc.getTeam() ) ){
+                                tree = treeInfo;
+                                break;
+                            }
+                        }
+
+                        if(tree != null){
+                            // if the a tree is close by, then chop it
+                            if(rc.canChop(tree.location)){
+                                rc.chop(tree.location);
+                            } else {
+                                //move toward the nearest tree
+                                if(rc.canMove(tree.location)){
+                                    rc.move(tree.location);
+                                } else {
+                                    for(TreeInfo treeInfo: treeInfos){
+                                        //if the tree is not ours, chop it
+                                        if( rc.canMove(treeInfo.location)){
+                                            rc.move(treeInfo.location);
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // notify others of the location of the tree
+                            // only if the broadcasted location has nothing
+                            /*
+                            if(possibleTreeLoc == null){
+                                rc.broadcastFloat(200, tree.location.x);
+                                rc.broadcastFloat(201, tree.location.y);
+                            }
+                            */
+
+                        } else {
+                            //if there are no trees sensed, move randomly
+                            //tryMove(randomDirection());
+
+                            //if there are no trees sensed, the try to move towards a tree that does exist
+                            /*
+                            if(possibleTreeLoc != null){
+                                tryMove(possibleTreeLoc);
+                            } else {
+                                //if there are no trees available, then just move
+                                tryMove(randomDirection());
+                            }
+                            */
+
+                            Direction randDir = randomDirection();
+                            while ( !rc.canMove(randDir) ) randDir = randomDirection();
+
+                            tryMove(randDir);
+                        }
+                    }
                 }
 
-                targetTreeLocation = treeInfo.location;
+                // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
+                Clock.yield();
 
-                break;
+            } catch (Exception e) {
+                System.out.println("Lumberjack Exception");
+                e.printStackTrace();
             }
-        } else {
-            if(rc.canChop(targetTreeLocation)){
-                try {
-                    rc.chop(targetTreeLocation);
-                } catch (GameActionException e) {
-                    e.printStackTrace();
-                }
-            } else {
-                tryMove(targetTreeLocation);
-            }
-        }*/
-
-        if(targetTreeLocation == null){
-            MapLocation targetTree = null;
-            TreeInfo[] treeInfos = rc.senseNearbyTrees();
-            if(treeInfos.length > 0){
-                targetTreeLocation = treeInfos[0].location;
-            } else {
-                tryMove(randomDirection());
-            }
-
-        } else if(rc.senseNearbyTrees(targetTreeLocation, .1F,  Team.NEUTRAL).length == 0){
-
-            targetTreeLocation = null;
-
-        } else {
-
-            if(rc.canChop(targetTreeLocation)){
-                try {
-                    rc.chop(targetTreeLocation);
-                } catch (GameActionException e) {
-                    e.printStackTrace();
-                }
-            } else {
-                tryMove(targetTreeLocation);
-            }
-
         }
-
     }
 }

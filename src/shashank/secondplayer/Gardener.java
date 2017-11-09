@@ -2,10 +2,12 @@ package shashank.secondplayer;
 
 import battlecode.common.*;
 
+import java.util.Arrays;
+import java.util.Comparator;
+
 public class Gardener extends BaseRobot{
     private RobotController rc;
-    private boolean settledDown = false;
-    private boolean firstGardener = false;
+    private boolean foundEmptySpot = false;
 
     public Gardener(RobotController rc) {
         super(rc);
@@ -16,129 +18,132 @@ public class Gardener extends BaseRobot{
     void loop() {
 
         try {
-            int numOfGardeners = rc.readBroadcast(10);
-            if(numOfGardeners == 0) firstGardener = true;
-            rc.broadcast(10, numOfGardeners + 1);
+            rc.broadcast(100, rc.readBroadcast(100) + 1);
         } catch (GameActionException e) {
             e.printStackTrace();
         }
 
-        while (true){
+        // The code you want your robot to perform every round should be in this loop
+        while (true) {
+
+            // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
-
-                if(settledDown){
-                    maintainTrees();
-                } else if(!settledDown && !rc.isCircleOccupiedExceptByThisRobot(rc.getLocation(), 3) && rc.onTheMap(rc.getLocation(), 3)){
-                    rc.plantTree(new Direction((float) Math.toRadians(135)));
-                    rc.plantTree(new Direction((float) Math.toRadians(90)));
-                    rc.plantTree(new Direction((float) Math.toRadians(45)));
-                    rc.plantTree(new Direction((float) Math.toRadians(0)));
-                    rc.plantTree(new Direction((float) Math.toRadians(315)));
-                    rc.plantTree(new Direction((float) Math.toRadians(270)));
-                    rc.plantTree(new Direction((float) Math.toRadians(240)));
-                    settledDown = true;
-                } else {
-                    tryMove(randomDirection());
-
-                    TreeInfo[] treeInfos = rc.senseNearbyTrees(5);
-
-                    if(treeInfos.length > 0 & rc.getTeamBullets() > 100){
-                        build(RobotType.LUMBERJACK);
-                    }
-                }
-
-            } catch (GameActionException e) {
-                e.printStackTrace();
-            }
-                /*
-                if((rc.getHealth()/rc.getType().maxHealth) < 0.1){
-                    rc.broadcast(10, rc.readBroadcast(10) - 1);
+                if(aboutToDie()){
+                    rc.broadcast(100, rc.readBroadcast(100) - 1);
                     rc.disintegrate();
-                }*/
-
-                /*
-                if (!settledDown){
-                    settleDown();
-                } else {
-                    maintainTrees();
                 }
-                */
 
-            Clock.yield();
-        }
+                //is the robot has not started to plant yet, look for opportunities
+                if(!foundEmptySpot) {
+                    //if we found a spot, plant a bunch of trees and stop moving
+                    float circleRadius = rc.getType().bodyRadius + 2*GameConstants.BULLET_TREE_RADIUS;
+                    if (!rc.isCircleOccupiedExceptByThisRobot(rc.getLocation(), circleRadius)
+                            && rc.onTheMap(rc.getLocation(), circleRadius)) {
+                        if (rc.canPlantTree(Direction.NORTH)) {
+                            rc.plantTree(Direction.NORTH);
+                        }
 
-    }
-
-    private void maintainTrees() {
-        TreeInfo[] treeInfos = rc.senseNearbyTrees(3    , rc.getTeam());
-        for(TreeInfo treeInfo: treeInfos){
-            if(treeInfo.health < 46){
-                if(rc.canWater(treeInfo.location)){
-                    try {
-                        rc.water(treeInfo.location);
-                    } catch (GameActionException e) {
-                        e.printStackTrace();
+                        foundEmptySpot = true;
                     }
 
-                    break;
-                }
-            }
-        }
-    }
+                    Direction randomDir = randomDirection();
+                    while (!rc.hasMoved() && !rc.canMove(randomDir)) randomDir = randomDirection();
 
-    private void settleDown() {
-        //first check if you are the first gardener
-        if(firstGardener){
-            //find an empty spot
-            //if there are trees everywhere, then release a couple of lumberjacks
-            TreeInfo[] treeInfos = rc.senseNearbyTrees();
-            if(treeInfos.length > 0){
-                for(TreeInfo treeInfo: treeInfos){
-                    build(RobotType.LUMBERJACK, treeInfo.location.directionTo(rc.getLocation()) );
+                    tryMove(randomDir);
                 }
-            }
 
-            //find a free space
-            try {
-                if(!rc.isCircleOccupiedExceptByThisRobot(rc.getLocation(), 2) && rc.onTheMap(rc.getLocation(), 3)){
-                    rc.plantTree(new Direction((float) Math.toRadians(135)));
-                    rc.plantTree(new Direction((float) Math.toRadians(90)));
-                    rc.plantTree(new Direction((float) Math.toRadians(45)));
-                    rc.plantTree(new Direction((float) Math.toRadians(0)));
-                    rc.plantTree(new Direction((float) Math.toRadians(315)));
-                    rc.plantTree(new Direction((float) Math.toRadians(270)));
-                    rc.plantTree(new Direction((float) Math.toRadians(240)));
-                    settledDown = true;
+                if(foundEmptySpot){
+                    //once we settled, maintain the trees around us
+
+                    //sort the array by the putting the trees with less health first
+                    TreeInfo[] teamTrees = rc.senseNearbyTrees(-1, rc.getTeam());
+                    Arrays.sort(teamTrees, new Comparator<TreeInfo>() {
+                        @Override
+                        public int compare(TreeInfo o1, TreeInfo o2) {
+                            return o1.health == o2.health ? 0 : (o1.health < o2.health ? -1 : 1);
+                        }
+                    });
+
+                    if(teamTrees.length > 0){
+                        //if we havent watered a tree yet
+                        if(rc.canWater(teamTrees[0].ID)){
+                            //then water it
+                            rc.water(teamTrees[0].ID);
+                        }
+                    }
+
+
+                    if(rc.canPlantTree(Direction.NORTH)){
+                        rc.plantTree(Direction.NORTH);
+                    } else if(rc.canPlantTree(Direction.EAST)){
+                        rc.plantTree(Direction.EAST);
+                    } else if(rc.canPlantTree(Direction.SOUTH)){
+                        rc.plantTree(Direction.SOUTH);
+                    }
+
+                    //keep spawning units
+
+                    if(rc.getBuildCooldownTurns() == 0){
+                        // See whether there are less soldiers or less lumberjacks and build that
+                        double percentOfSoldiersBuilt = rc.readBroadcast(500)/20F;
+                        double percentOfLumberJacksBuilt = rc.readBroadcast(600)/30F;
+
+                        if(percentOfSoldiersBuilt < percentOfLumberJacksBuilt && percentOfSoldiersBuilt <= 1){
+                            Direction rndDir = randomDirection();
+                            while ( !rc.canBuildRobot(RobotType.SOLDIER, rndDir) ) rndDir = randomDirection();
+                            rc.buildRobot(RobotType.SOLDIER, rndDir);
+                        } else if (percentOfLumberJacksBuilt <= 1) {
+                            Direction rndDir = randomDirection();
+                            while ( !rc.canBuildRobot(RobotType.LUMBERJACK, rndDir) ) rndDir = randomDirection();
+                            rc.buildRobot(RobotType.LUMBERJACK, rndDir);
+                        }
+                    }
+
+
                 } else {
-                    tryMove(randomDirection());
+                    //if we havent settled down yet, then we keep spawning and moving
+
+                    // Listen for home archon's location
+                    int xPos = rc.readBroadcast(0);
+                    int yPos = rc.readBroadcast(1);
+                    MapLocation archonLoc = new MapLocation(xPos,yPos);
+
+                    if(rc.getBuildCooldownTurns() == 0){
+                        // See whether there are less soldiers or less lumberjacks and build that
+                        double percentOfSoldiersBuilt = rc.readBroadcast(500)/20F;
+                        double percentOfLumberJacksBuilt = rc.readBroadcast(600)/30F;
+
+                        if(percentOfSoldiersBuilt < percentOfLumberJacksBuilt && percentOfSoldiersBuilt <= 1){
+                            Direction rndDir = randomDirection();
+                            while ( !rc.canBuildRobot(RobotType.SOLDIER, rndDir) ) rndDir = randomDirection();
+                            rc.buildRobot(RobotType.SOLDIER, rndDir);
+                        } else if (percentOfLumberJacksBuilt <= 1) {
+                            Direction rndDir = randomDirection();
+                            while ( !rc.canBuildRobot(RobotType.LUMBERJACK, rndDir) ) rndDir = randomDirection();
+                            rc.buildRobot(RobotType.LUMBERJACK, rndDir);
+                        }
+                    }
+
+
+                    // Move randomly
+                    Direction randomDir = randomDirection();
+                    while (!rc.hasMoved() && !rc.canMove(randomDir)) randomDir = randomDirection();
+
+                    tryMove(randomDir);
                 }
-            } catch (GameActionException e) {
+
+                // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
+                Clock.yield();
+
+            } catch (Exception e) {
+                System.out.println("Gardener Exception");
                 e.printStackTrace();
             }
-        } else {
-            tryMove(randomDirection());
         }
 
     }
 
-    private boolean build(RobotType type, Direction direction){
-        if(type != null && direction != null){
-            if(rc.canBuildRobot(type, direction)){
-                try {
-                    rc.buildRobot(type, direction);
-                    return true;
-                } catch (GameActionException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private void build(RobotType type){
-        while( !build(type, randomDirection()) ){
-            //keep looping until you can build a robot
-        }
+    private boolean aboutToDie() {
+        return rc.getHealth() < 7;
     }
 }
