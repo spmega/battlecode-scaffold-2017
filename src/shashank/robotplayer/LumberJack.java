@@ -1,8 +1,6 @@
-package shashank.secondplayer;
+package shashank.robotplayer;
 
 import battlecode.common.*;
-
-import java.util.Arrays;
 
 public class LumberJack extends BaseRobot{
     private RobotController rc;

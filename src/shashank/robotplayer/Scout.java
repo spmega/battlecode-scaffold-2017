@@ -1,4 +1,4 @@
-package shashank.secondplayer;
+package shashank.robotplayer;
 
 import battlecode.common.Clock;
 import battlecode.common.RobotController;

@@ -1,4 +1,4 @@
-package shashank.secondplayer;
+package shashank.robotplayer;
 
 public class DebugLogger {
     private static final boolean WARNING_LEVEL = true;
