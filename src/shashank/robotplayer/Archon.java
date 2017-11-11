@@ -42,7 +42,7 @@ public class Archon extends BaseRobot{
         */
 
         while (true) {
-
+            considerDonating();
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
                 BulletInfo[] bulletInfos = rc.senseNearbyBullets();

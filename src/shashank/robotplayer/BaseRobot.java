@@ -55,48 +55,78 @@ public abstract class BaseRobot {
         tryMove(direction, null, distance);
     }
 
-    /*
-    private void forceMove(Direction direction, MapLocation mapLocation, float distance, double maxOffsetAmount, double offsetAmount, boolean counterClockWise){
+    public void forceMoveRandomly(){
+        // Move randomly
+        Direction randomDir = randomDirection();
+        Direction originalRandDir = randomDir;
+        boolean canMove = true;
 
-        try {
+        while (!rc.hasMoved() && !rc.canMove(randomDir)) {
 
-            if(mapLocation != null && rc.canMove(mapLocation)){
+            randomDir = randomDir.rotateLeftDegrees(5);
 
-                Direction directionToMoveIn = rc.getLocation().directionTo(mapLocation);
-                float distanceToCover = rc.getLocation().distanceTo(mapLocation);
-
-                if(!rc.hasMoved()){
-                    while(!rc.canMove(directionToMoveIn, distanceToCover)){
-
-                    }
-                }
-
-            } else if(direction != null && distance != 0) {
-                rc.move(direction, distance);
-            } else if (direction != null){
-                rc.move(direction);
-            } else {
-                DebugLogger.printWarning(rc.getType().name() + " : " + rc.getID() + "did not move because there were no valid parameters given");
+            if(originalRandDir.equals(randomDir, 0.0349066F)){
+                //give up on moving
+                canMove = false;
+                break;
             }
+        }
 
+        if(canMove && !rc.hasMoved()) try {
+            rc.move(randomDir);
         } catch (GameActionException e) {
             DebugLogger.printError(e);
         }
-
     }
 
-    public void forceMove(MapLocation mapLocation){
-        tryMove(null, mapLocation, 0);
-    }
+    public void forceMove(Direction direction, MapLocation mapLocation, float distance, float rotationOffset, boolean clockwise){
+        Direction directionToGoIn = direction;
+        float distanceToCover = distance;
 
-    public void forceMove(Direction direction){
-        tryMove(direction, null, 0);
-    }
+        if(mapLocation != null) {
+            directionToGoIn = rc.getLocation().directionTo(mapLocation);
+            distanceToCover = rc.getLocation().distanceTo(mapLocation);
+        }
 
-    public void forceMove(Direction direction, float distance){
-        tryMove(direction, null, distance);
+        if(mapLocation == null && direction == null){
+            DebugLogger.printError("no valid parameters given to method forceMove");
+            return;
+        }
+
+        // Move randomly
+        Direction originalDir = directionToGoIn;
+        boolean canMove = true;
+
+        int count = 0;
+        while (!rc.hasMoved() && !rc.canMove(directionToGoIn)) {
+
+            if(clockwise){
+                directionToGoIn = directionToGoIn.rotateRightDegrees(rotationOffset);
+            } else {
+                directionToGoIn = directionToGoIn.rotateLeftDegrees(rotationOffset);
+            }
+
+            if(originalDir.equals(directionToGoIn, 0.0349066F)){
+                //give up on moving
+                canMove = false;
+                break;
+            }
+
+            if(count*rotationOffset > 360){
+                //give up on moving
+                canMove = false;
+                break;
+            }
+
+            count++;
+        }
+
+        if(canMove && !rc.hasMoved()) try {
+            rc.move(directionToGoIn);
+        } catch (GameActionException e) {
+            DebugLogger.printError(e);
+        }
     }
-    */
 
     //Shooting
     private void shoot(boolean triad, boolean pentad, Direction direction){
@@ -164,6 +194,15 @@ public abstract class BaseRobot {
         return (perpendicularDist <= rc.getType().bodyRadius);
     }
 
+    public final void considerDonating(){
+        if(rc.getTeamBullets() / rc.getVictoryPointCost() >= 1000){
+            try {
+                rc.donate(rc.getTeamBullets());
+            } catch (GameActionException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
     abstract void loop();
 

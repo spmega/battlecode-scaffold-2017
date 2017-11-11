@@ -4,6 +4,7 @@ import battlecode.common.*;
 
 public class LumberJack extends BaseRobot{
     private RobotController rc;
+    private boolean alreadyRequestedReinforcements = false;
 
     public LumberJack(RobotController rc) {
         super(rc);
@@ -15,19 +16,24 @@ public class LumberJack extends BaseRobot{
         Team enemy = rc.getTeam().opponent();
 
         try {
-            rc.broadcast(600, rc.readBroadcast(500) + 1);
+            rc.broadcast(600, rc.readBroadcast(600) + 1);
         } catch (GameActionException e) {
             e.printStackTrace();
         }
 
         // The code you want your robot to perform every round should be in this loop
         while (true) {
-
+            considerDonating();
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
-                //if less than 15% of health, consider spawning more one more soldier
-                if(rc.getHealth()/rc.getType().maxHealth < 0.15){
-                    rc.broadcast(600, rc.readBroadcast(500) - 1);
+                if(!alreadyRequestedReinforcements){
+                    //if less than 15% of health, consider spawning more one more soldier
+                    float percentOfHealthLeft = rc.getHealth()/rc.getType().maxHealth;
+                    if(percentOfHealthLeft < 0.5){
+                        rc.broadcast(600, rc.readBroadcast(600) - 1);
+                    }
+
+                    alreadyRequestedReinforcements = true;
                 }
 
                 //read the broadcast, in case you dont find any trees
@@ -66,7 +72,7 @@ public class LumberJack extends BaseRobot{
                         MapLocation enemyLocation = robots[0].getLocation();
                         Direction toEnemy = myLocation.directionTo(enemyLocation);
 
-                        tryMove(toEnemy);
+                        forceMove(null, enemyLocation, 0, 1, true);
 
                         rc.broadcastFloat(400, enemyLocation.x);
                         rc.broadcastFloat(401, enemyLocation.y);
@@ -93,12 +99,12 @@ public class LumberJack extends BaseRobot{
                             } else {
                                 //move toward the nearest tree
                                 if(rc.canMove(tree.location)){
-                                    rc.move(tree.location);
+                                    forceMove(null, tree.location, 0, 1, true);
                                 } else {
                                     for(TreeInfo treeInfo: treeInfos){
                                         //if the tree is not ours, chop it
                                         if( rc.canMove(treeInfo.location)){
-                                            rc.move(treeInfo.location);
+                                            forceMove(null, tree.location, 0, 1, true);
                                             break;
                                         }
                                     }
@@ -128,10 +134,7 @@ public class LumberJack extends BaseRobot{
                             }
                             */
 
-                            Direction randDir = randomDirection();
-                            while ( !rc.canMove(randDir) ) randDir = randomDirection();
-
-                            tryMove(randDir);
+                            forceMoveRandomly();
                         }
                     }
                 }

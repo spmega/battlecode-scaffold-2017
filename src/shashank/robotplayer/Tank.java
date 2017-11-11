@@ -14,6 +14,7 @@ public class Tank extends BaseRobot{
     @Override
     void loop() {
         while (true){
+            considerDonating();
             tryMove(randomDirection());
 
             Clock.yield();

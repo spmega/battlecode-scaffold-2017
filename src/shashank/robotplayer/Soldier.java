@@ -4,6 +4,7 @@ import battlecode.common.*;
 
 public class Soldier extends BaseRobot{
     private RobotController rc;
+    private boolean alreadyRequestedReinforcements = false;
 
     public Soldier(RobotController rc) {
         super(rc);
@@ -24,11 +25,18 @@ public class Soldier extends BaseRobot{
 
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
-                MapLocation myLocation = rc.getLocation();
-                //if less than 15% of health, consider spawning more one more soldier
-                if(rc.getHealth()/rc.getType().maxHealth < 0.15){
-                    rc.broadcast(500, rc.readBroadcast(500) - 1);
+                considerDonating();
+                if(!alreadyRequestedReinforcements){
+                    //if less than 15% of health, consider spawning more one more soldier
+                    float percentOfHealthLeft = rc.getHealth()/rc.getType().maxHealth;
+                    if(percentOfHealthLeft < 0.5){
+                        rc.broadcast(500, rc.readBroadcast(500) - 1);
+                    }
+
+                    alreadyRequestedReinforcements = true;
                 }
+
+                MapLocation myLocation = rc.getLocation();
 
                 // See if there are any nearby enemy robots
                 RobotInfo[] robots = rc.senseNearbyRobots(-1, enemy);
@@ -51,19 +59,15 @@ public class Soldier extends BaseRobot{
                     MapLocation possibleEnemyLoc = new MapLocation(x, y);
 
                     if(x == 0 && y == 0){
-                        Direction randDir = randomDirection();
-                        while ( !rc.canMove(randDir) ) randDir = randomDirection();
-                        tryMove(randDir);
+                        forceMoveRandomly();
 
                     } else if(rc.getLocation().distanceTo(possibleEnemyLoc) <= 1 && rc.senseNearbyRobots(-1, rc.getTeam().opponent()).length == 0){
                         rc.broadcastFloat(400, 0);
                         rc.broadcastFloat(401, 0);
 
-                        Direction randDir = randomDirection();
-                        while ( !rc.canMove(randDir) ) randDir = randomDirection();
-                        tryMove(randDir);
+                        forceMoveRandomly();
                     } else {
-                        tryMove(possibleEnemyLoc);
+                        forceMove(null, possibleEnemyLoc, 0, 1, true);
                     }
                 }
 

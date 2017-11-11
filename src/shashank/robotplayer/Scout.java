@@ -14,6 +14,7 @@ public class Scout extends BaseRobot{
     @Override
     void loop() {
         while (true){
+            considerDonating();
             tryMove(randomDirection());
 
             Clock.yield();
