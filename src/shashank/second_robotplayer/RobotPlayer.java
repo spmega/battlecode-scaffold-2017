@@ -30,6 +30,7 @@ public strictfp class RobotPlayer {
                 break;
             case LUMBERJACK:
                 //runLumberjack();
+                Lumberjack.loop();
                 break;
             case TANK:
                 //runLumberjack();

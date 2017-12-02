@@ -1,12 +1,10 @@
 package shashank.second_robotplayer;
 
-import battlecode.common.Clock;
-import battlecode.common.Direction;
-import battlecode.common.GameActionException;
-import battlecode.common.TreeInfo;
+import battlecode.common.*;
 
 import java.util.Arrays;
 
+import static shashank.second_robotplayer.RobotPlayer.randomDirection;
 import static shashank.second_robotplayer.RobotPlayer.rc;
 
 /*
@@ -48,14 +46,41 @@ public class Gardener {
         }
     }
 
-    private static void findSpot() {
+    private static void findSpot() throws GameActionException {
         /* Ways to find empty spots:
          *  - Just build some lumberjacks to free up some space
          *  - Wander around until we find some empty spots
          *     (Not feasible since it will depend on luck
         */
 
-        
+        // find a direction to build the lumberjack in
+        Direction buildDir = randomDirection();
+
+        // First, try intended direction
+        if (rc.getBuildCooldownTurns() == 0 && rc.canBuildRobot(RobotType.LUMBERJACK, buildDir) ) {
+            rc.canBuildRobot(RobotType.LUMBERJACK, buildDir);
+            return;
+        }
+
+        int checksPerSide = 180;
+        int degreeOffset = 1;
+        int currentCheck = 1;
+
+        while ( rc.getBuildCooldownTurns() == 0 && currentCheck<=checksPerSide){
+
+            // Try the offset of the left side
+            if(rc.canBuildRobot(RobotType.LUMBERJACK, buildDir.rotateLeftDegrees(degreeOffset*currentCheck))) {
+                rc.buildRobot(RobotType.LUMBERJACK, buildDir.rotateLeftDegrees(degreeOffset*currentCheck));
+                break;
+            }
+            // Try the offset on the right side
+            if(rc.canBuildRobot(RobotType.LUMBERJACK, buildDir.rotateRightDegrees(degreeOffset*currentCheck))) {
+                rc.buildRobot(RobotType.LUMBERJACK, buildDir.rotateRightDegrees(degreeOffset*currentCheck));
+                break;
+            }
+            // No move performed, try slightly further
+            currentCheck++;
+        }
     }
 
     private static void plantTrees() throws GameActionException {
